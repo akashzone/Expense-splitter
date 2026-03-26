@@ -4,6 +4,7 @@ const port = 8080;
 
 const mongoose = require("mongoose");
 const Expense = require("./models/expense.js");
+const User = require("./models/user.js");
 
 async function main() {
   await mongoose.connect("mongodb://127.0.0.1:27017/ExpenseSplitter");
@@ -22,24 +23,42 @@ app.get("/", (req, res) => {
 });
 
 app.get("/testUser", async (req, res) => {
-  // let sampleUser = new User({
-  //     amount: 1900,
-  //     paidBy: "Akash"
-  // });
-  // console.log(sampleUser);
-  let sampleUser = new Expense({
-    amount: 1000,
-    paidBy: "Akash",
+  try { let sampleUsers = await User.insertMany([
+    { user: "Akash" },
+    { user: "Sam" },
+    { user: "Govind" },
+  ]);
+  console.log("Saved Successfully");
+  console.log(sampleUsers);
+  let amount = 1200;
+
+  let sampleExpense = new Expense({
+    amount: amount,
+    paidBy: sampleUsers[0]._id,
     participants: [
-      { user: "Sam", amountOwe: Math.round(1000 / 3) },
-      { user: "Agnel", amountOwe: Math.round(1000 / 3) },
-      { user: "Govind", amountOwe:  Math.round(1000 / 3) },
+      
+        {
+          userName: sampleUsers[0]._id,
+          amountOwe: amount / 3,
+        },
+        {
+          userName: sampleUsers[1]._id,
+          amountOwe: amount / 3,
+        },
+        {
+          userName: sampleUsers[2]._id,
+          amountOwe: amount / 3,
+        },
     ],
   });
-
-  console.log(sampleUser);
-  await sampleUser.save();
-  res.send("Saving Sample User!");
+  
+  let savedExpense = await sampleExpense.save();
+  console.log(savedExpense);
+  res.send("Users & Expense saved successfully!");
+  }
+  catch(err){
+  console.log("Err: ",err);
+  }
 });
 
 app.listen(port, () => {
