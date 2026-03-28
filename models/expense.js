@@ -3,6 +3,10 @@
 const mongoose = require("mongoose");
 
 const ExpenseSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true
+  },
   amount: {
     type: Number,
     required: true,
@@ -14,8 +18,7 @@ const ExpenseSchema = new mongoose.Schema({
   participants: [
   {
     userName: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      type: String,
     },
     amountOwe: Number,
   }
