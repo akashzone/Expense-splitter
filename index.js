@@ -22,6 +22,8 @@ app.get("/", (req, res) => {
   res.send("API is working");
 });
 
+/* ---------------- USERS ---------------- */
+
 app.post("/users", async (req, res) => {
   try {
     const users = await User.insertMany([
@@ -29,12 +31,22 @@ app.post("/users", async (req, res) => {
       { user: "Sam" },
       { user: "Govind" },
     ]);
-
     res.status(201).json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+app.get("/users", async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ---------------- GROUPS ---------------- */
 
 app.post("/groups", async (req, res) => {
   try {
@@ -54,6 +66,28 @@ app.post("/groups", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+app.get("/groups/:groupId", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({ error: "Invalid group ID" });
+    }
+
+    const group = await Group.findById(groupId).populate("members");
+
+    if (!group) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+
+    res.json(group);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ---------------- EXPENSES ---------------- */
 
 app.post("/groups/:groupId/expenses", async (req, res) => {
   try {
@@ -82,9 +116,9 @@ app.post("/groups/:groupId/expenses", async (req, res) => {
 
     const share = amount / participants.length;
 
-    const result = participants.map((p) => ({
-      userName: p,
-      amountOwe: p === paidBy ? 0 : share,
+    const result = participants.map((userId) => ({
+      userId,
+      amountOwe: userId === paidBy ? 0 : share,
     }));
 
     const expense = await Expense.create({
@@ -101,7 +135,7 @@ app.post("/groups/:groupId/expenses", async (req, res) => {
   }
 });
 
-app.get("/groups/:groupId", async (req, res) => {
+app.get("/groups/:groupId/expenses", async (req, res) => {
   try {
     const { groupId } = req.params;
 
@@ -109,17 +143,17 @@ app.get("/groups/:groupId", async (req, res) => {
       return res.status(400).json({ error: "Invalid group ID" });
     }
 
-    const group = await Group.findById(groupId);
+    const expenses = await Expense.find({ group: groupId })
+      .populate("paidBy")
+      .populate("participants.userId");
 
-    if (!group) {
-      return res.status(404).json({ error: "Group not found" });
-    }
-
-    res.json(group);
+    res.json(expenses);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+/* ---------------- SERVER ---------------- */
 
 app.listen(port, () => {
   console.log(`Server running on PORT ${port}`);
