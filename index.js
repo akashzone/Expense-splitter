@@ -1,132 +1,125 @@
 const express = require("express");
-const app = express();
-const port = 8080;
-
 const mongoose = require("mongoose");
+
 const Expense = require("./models/expense.js");
 const User = require("./models/user.js");
 const Group = require("./models/group.js");
+
+const app = express();
+const port = 8080;
+
+app.use(express.json());
 
 async function main() {
   await mongoose.connect("mongodb://127.0.0.1:27017/ExpenseSplitter");
 }
 
 main()
-  .then(() => {
-    console.log("Connected to MongoDB");
-  })
-  .catch((err) => {
-    console.log(err);
-  });
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.log(err));
 
 app.get("/", (req, res) => {
-  res.send("Yess, working root !!");
+  res.send("API is working");
 });
 
-// To insert sample users
-app.post('/users',async (req,res)=>{
-  try { let sampleUsers = await User.insertMany([
-    { user: "Akash" },
-    { user: "Sam" },
-    { user: "Govind" },
-  ]);
-  console.log("Saved Successfully");
-  console.log(sampleUsers);
-  res.send("Users saved successfully!");
-  }
-  catch(err){
-  console.log("Err: ",err);
+app.post("/users", async (req, res) => {
+  try {
+    const users = await User.insertMany([
+      { user: "Akash" },
+      { user: "Sam" },
+      { user: "Govind" },
+    ]);
+
+    res.status(201).json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-//User clicks on add group
-app.post("/groups",async (req,res)=>{
-  let sampleGroup = await Group.insertOne({
-    title: "Goa Trip",
-    members: ["Akash", "Sam", "Govind"],
-  });
+app.post("/groups", async (req, res) => {
+  try {
+    const { title, members } = req.body;
 
-  console.log("Sample Group");
-  console.log(sampleGroup);
-  res.send("Group created successfully!");
-})
-
-
-// User clicks on add expense
-app.post('/groups/expense',async (req,res)=>{
-  /* let split = req.body.equal;
-  // let {title,amount,paidBy,participants} = req.body;
-     let amountOwe = 0;
-  // let numberOfParticipants = participants.length;
-  // if (split == "equal"){
-     amountOwe = amount / numberOfParticipant;
-     for (participant of participants){
-      for (participant.username == paidBy){
-        amountOwe == 0; 
-      } 
-     }
+    if (!title || !Array.isArray(members)) {
+      return res.status(400).json({ error: "Invalid input" });
     }
-  let sampleExpense = new Expense({
-    title: title,
-    amount: amount,
-    paidBy: paidBy,
-    participants: [
-        
-        {
-          userName: participants[0].username,
-          amountOwe: amountOwe,
-        },
-        {
-          userName: participants[1].username,
-          amountOwe: amountOwe,
-        },
-        {
-          userName: participants[2].username,
-          amountOwe: amountOwe,
-        },
-    ],
-  });
-    
 
+    const group = await Group.create({
+      title,
+      members,
+    });
 
-  */  
+    res.status(201).json(group);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-  let amount = 1200;
-  let paidBy = "Akash"
-  let sampleExpense = new Expense({
-    title: "Hotel",
-    amount: amount,
-    paidBy: paidBy,
-    participants: [
-        
-        {
-          userName: "Akash",
-          amountOwe: paidBy == "Akash" ? 0 : amount / 3,
-        },
-        {
-          userName: "Sam",
-          amountOwe: paidBy == "Sam" ? 0 : amount / 3,
-        },
-        {
-          userName: "Govind",
-          amountOwe: paidBy == "Govind" ? 0 : amount / 3,
-        },
-    ],
-  });
-  
-  let savedExpense = await sampleExpense.save();
-  console.log(savedExpense);
-  res.send("Expense saved successfully!");
-})
+app.post("/groups/:groupId/expenses", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { title, amount, paidBy, participants } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({ error: "Invalid group ID" });
+    }
 
-// Tp fetch group dataUser
-app.get("/groups/:id",async (req,res)=>{
-  let {id} = req.params;
-  let sampleGroupData = await Group.findById(id);
-  console.log(sampleGroupData)
-  res.send(sampleGroupData)
-})
+    if (!title) {
+      return res.status(400).json({ error: "Title required" });
+    }
+
+    if (!amount || typeof amount !== "number") {
+      return res.status(400).json({ error: "Invalid amount" });
+    }
+
+    if (!participants || !Array.isArray(participants)) {
+      return res.status(400).json({ error: "Invalid participants" });
+    }
+
+    if (!participants.includes(paidBy)) {
+      return res.status(400).json({ error: "paidBy must be in participants" });
+    }
+
+    const share = amount / participants.length;
+
+    const result = participants.map((p) => ({
+      userName: p,
+      amountOwe: p === paidBy ? 0 : share,
+    }));
+
+    const expense = await Expense.create({
+      title,
+      amount,
+      paidBy,
+      participants: result,
+      group: groupId,
+    });
+
+    res.status(201).json(expense);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/groups/:groupId", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({ error: "Invalid group ID" });
+    }
+
+    const group = await Group.findById(groupId);
+
+    if (!group) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+
+    res.json(group);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.listen(port, () => {
   console.log(`Server running on PORT ${port}`);
