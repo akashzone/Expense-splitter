@@ -1,13 +1,15 @@
 const express = require("express");
 const mongoose = require("mongoose");
-
+const cors = require("cors");
 const Expense = require("./models/expense.js");
 const User = require("./models/user.js");
 const Group = require("./models/group.js");
 
+
 const app = express();
 const port = 8080;
 
+app.use(cors());
 app.use(express.json());
 
 async function main() {

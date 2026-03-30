@@ -1,23 +1,16 @@
 {
-  "name": "expense-splitter",
+  "name": "backend",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/akashzone/Expense-splitter.git"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/akashzone/Expense-splitter/issues"
-  },
-  "homepage": "https://github.com/akashzone/Expense-splitter#readme",
   "description": "",
   "dependencies": {
+    "cors": "^2.8.6",
     "express": "^5.2.1",
     "mongoose": "^9.3.3",
     "nodemon": "^3.1.14"
